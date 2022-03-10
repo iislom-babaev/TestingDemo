@@ -42,8 +42,7 @@ final class MyLoader {
 class TestingDemoTests: XCTestCase {
     
     func test_load_shoudLoadEmptyListOfStrings() throws {
-        let client = URLSessionClientSpy()
-        let sut = MyLoader(client: client)
+        let (sut, client) = makeSUT()
         
         var receivedResult: Result<[String], NSError>?
         sut.load { result in
@@ -60,8 +59,7 @@ class TestingDemoTests: XCTestCase {
     }
     
     func test_load_shoudCompleteWithAnyNSErorr() throws {
-        let client = URLSessionClientSpy()
-        let sut = MyLoader(client: client)
+        let (sut, client) = makeSUT()
         let anyNSError = NSError(domain: "any", code: 0)
         
         var receivedResult: Result<[String], NSError>?
@@ -75,6 +73,12 @@ class TestingDemoTests: XCTestCase {
         let unwrappedResult = try XCTUnwrap(receivedResult)
         
         XCTAssertEqual(unwrappedResult, .failure(anyNSError))
+    }
+    
+    private func makeSUT() -> (MyLoader,URLSessionClientSpy) {
+        let client = URLSessionClientSpy()
+        let sut = MyLoader(client: client)
+        return (sut, client)
     }
     
     final class URLSessionClientSpy : URLSessionClient {
