@@ -28,7 +28,8 @@ final class MyLoader {
     }
  
     func load(completion: @escaping (Result<[String], NSError>) -> Void) {
-        client.request { result in
+        client.request { [weak self] result in
+            guard self != nil else { return }
             switch result {
             case .success:
                 completion(.success([]))
@@ -52,6 +53,19 @@ class TestingDemoTests: XCTestCase {
         let anyNSError = NSError(domain: "any", code: 0)
         
         try expect(sut, when: { client.completeWithError(error: anyNSError) }, expectedResult: .failure(anyNSError))
+    }
+    
+    func test_load_clientDoesNotCompleteOnSUTInstanceBeingDeallocated() {
+        let client = URLSessionClientSpy()
+        var sut: MyLoader? = MyLoader(client: client)
+        
+        var receivedResult: Result<[String], NSError>?
+        sut?.load { receivedResult = $0 }
+        sut = nil
+        
+        client.completeWithError(error: NSError(domain: "any", code: 0))
+        
+        XCTAssertNil(receivedResult)
     }
     
     //MARK: - Helpers
