@@ -29,7 +29,12 @@ final class MyLoader {
  
     func load(completion: @escaping (Result<[String], NSError>) -> Void) {
         client.request { result in
-            completion(.success([]))
+            switch result {
+            case .success:
+                completion(.success([]))
+            case let .failure(error):
+                completion(.failure(error))
+            }
         }
     }
 }
@@ -54,6 +59,24 @@ class TestingDemoTests: XCTestCase {
 
     }
     
+    func test_load_shoudCompleteWithAnyNSErorr() throws {
+        let client = URLSessionClientSpy()
+        let sut = MyLoader(client: client)
+        let anyNSError = NSError(domain: "any", code: 0)
+        
+        var receivedResult: Result<[String], NSError>?
+        sut.load { result in
+            receivedResult = result
+        }
+        client.completeWithError(error: anyNSError)
+        
+        XCTAssertNotNil(receivedResult)
+        
+        let unwrappedResult = try XCTUnwrap(receivedResult)
+        
+        XCTAssertEqual(unwrappedResult, .failure(anyNSError))
+    }
+    
     final class URLSessionClientSpy : URLSessionClient {
         
         private var requests = [(Result<(Data, HTTPURLResponse), NSError>) -> Void]()
@@ -64,6 +87,10 @@ class TestingDemoTests: XCTestCase {
         
         func completeSuccesfullyWith(items: (Data, HTTPURLResponse)) {
             requests[0](.success(items))
+        }
+        
+        func completeWithError(error: NSError) {
+            requests[0](.failure(error))
         }
         
         
