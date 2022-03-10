@@ -44,41 +44,35 @@ class TestingDemoTests: XCTestCase {
     func test_load_shoudLoadEmptyListOfStrings() throws {
         let (sut, client) = makeSUT()
         
-        var receivedResult: Result<[String], NSError>?
-        sut.load { result in
-            receivedResult = result
-        }
-        client.completeSuccesfullyWith(items: (Data(), HTTPURLResponse()))
-        
-        XCTAssertNotNil(receivedResult)
-        
-        let unwrappedResult = try XCTUnwrap(receivedResult)
-        
-        XCTAssertEqual(unwrappedResult, .success([]))
-
+        try expect(sut, when: { client.completeSuccesfullyWith(items: (Data(), HTTPURLResponse())) }, expectedResult: .success([]))
     }
     
     func test_load_shoudCompleteWithAnyNSErorr() throws {
         let (sut, client) = makeSUT()
         let anyNSError = NSError(domain: "any", code: 0)
         
-        var receivedResult: Result<[String], NSError>?
-        sut.load { result in
-            receivedResult = result
-        }
-        client.completeWithError(error: anyNSError)
-        
-        XCTAssertNotNil(receivedResult)
-        
-        let unwrappedResult = try XCTUnwrap(receivedResult)
-        
-        XCTAssertEqual(unwrappedResult, .failure(anyNSError))
+        try expect(sut, when: { client.completeWithError(error: anyNSError) }, expectedResult: .failure(anyNSError))
     }
+    
+    //MARK: - Helpers
     
     private func makeSUT() -> (MyLoader,URLSessionClientSpy) {
         let client = URLSessionClientSpy()
         let sut = MyLoader(client: client)
         return (sut, client)
+    }
+    
+    func expect(_ sut: MyLoader, when action: () -> Void, expectedResult: Result<[String], NSError>) throws {
+        var receivedResult: Result<[String], NSError>?
+        sut.load { receivedResult = $0 }
+        
+        action()
+        
+        XCTAssertNotNil(receivedResult)
+        
+        let unwrappedResult = try XCTUnwrap(receivedResult)
+        
+        XCTAssertEqual(unwrappedResult, expectedResult)
     }
     
     final class URLSessionClientSpy : URLSessionClient {
